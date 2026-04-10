@@ -1,0 +1,63 @@
+body {
+    font-family: Arial;
+    text-align: center;
+    margin: 30px;
+}
+body {
+    font-family: Arial, sans-serif;  /* base font */
+}
+
+/* APPLY SAME FONT TO BOTH */
+textarea, #outputBox {
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+}
+/* FLEX CONTAINER */
+.container {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+/* INPUT BOX (LEFT) */
+textarea {
+    width: 40%;
+    height: 200px;
+    padding: 10px;
+    font-size: 16px;
+    background-color: #ffffff;   /* white */
+    border: 2px solid #ccc;
+    border-radius: 6px;
+}
+
+/* OUTPUT BOX (RIGHT) */
+#outputBox {
+    width: 40%;
+    min-height: 200px;
+    padding: 10px;
+    text-align: left;
+    background-color: #ffffff;   /* white */
+    border: 2px solid #ccc;
+    border-radius: 6px;
+}
+
+/* BUTTON CONTAINER CENTER */
+.btn-container {
+    margin-top: 25px;
+}
+
+/* GREEN BUTTON */
+button {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+button:hover {
+    background-color: #218838;
+}
