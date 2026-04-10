@@ -1,10 +1,7 @@
 async function removeDuplicates() {
     const inputText = document.getElementById("inputText").value;
 
-    if (!inputText) {
-        alert("Please enter text");
-        return;
-    }
+    document.getElementById("outputText").value = "Processing...";
 
     try {
         const response = await fetch("https://ai-duplicate-sentence-remover-1.onrender.com/process", {
@@ -20,10 +17,9 @@ async function removeDuplicates() {
 
         const data = await response.json();
 
-        document.getElementById("outputText").value = data.result;
+        document.getElementById("outputText").value = data.cleaned_text;
 
     } catch (error) {
-        console.error("Error:", error);
-        alert("Error connecting to API");
+        document.getElementById("outputText").value = "Error connecting to API";
     }
 }
