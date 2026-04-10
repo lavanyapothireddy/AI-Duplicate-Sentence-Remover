@@ -1,6 +1,13 @@
 async function removeDuplicates() {
+
     const inputText = document.getElementById("inputText").value;
 
+    if (!inputText) {
+        alert("Please enter text");
+        return;
+    }
+
+    // Show loading
     document.getElementById("outputText").value = "Processing...";
 
     try {
@@ -17,9 +24,13 @@ async function removeDuplicates() {
 
         const data = await response.json();
 
-        document.getElementById("outputText").value = data.cleaned_text;
+        console.log("API RESPONSE:", data);
+
+        // ✅ IMPORTANT LINE (no undefined now)
+        document.getElementById("outputText").value = data.result;
 
     } catch (error) {
+        console.error("ERROR:", error);
         document.getElementById("outputText").value = "Error connecting to API";
     }
 }
