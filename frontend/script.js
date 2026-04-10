@@ -1,27 +1,29 @@
 async function removeDuplicates() {
+    const inputText = document.getElementById("inputText").value;
 
-    const text = document.getElementById("textInput").value;
-
-    document.getElementById("outputBox").innerText = "Processing...";
+    if (!inputText) {
+        alert("Please enter text");
+        return;
+    }
 
     try {
-        const response = await fetch("https://parabola-unwomanly-promoter.ngrok-free.dev/process", {
+        const response = await fetch("https://ai-duplicate-sentence-remover-1.onrender.com/process", {
             method: "POST",
             headers: {
-                "Content-Type": "application/json",
-                "ngrok-skip-browser-warning": "true"
+                "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                text: text,
+                text: inputText,
                 threshold: 0.8
             })
         });
 
         const data = await response.json();
 
-        document.getElementById("outputBox").innerText = data.cleaned_text;
+        document.getElementById("outputText").value = data.result;
 
     } catch (error) {
-        document.getElementById("outputBox").innerText = "Error connecting to API";
+        console.error("Error:", error);
+        alert("Error connecting to API");
     }
 }
