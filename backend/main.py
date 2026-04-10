@@ -18,8 +18,14 @@ def home():
 @app.post("/process")
 def process_text(data: dict):
     text = data.get("text", "")
-    
-    sentences = list(dict.fromkeys(text.split(".")))
-    cleaned = ".".join([s.strip() for s in sentences if s.strip()])
+
+    # Split sentences correctly
+    sentences = [s.strip() for s in text.split(".") if s.strip()]
+
+    # Remove duplicates
+    unique = list(dict.fromkeys(sentences))
+
+    # Join with proper spacing
+    cleaned = ". ".join(unique) + "."
 
     return {"result": cleaned}
