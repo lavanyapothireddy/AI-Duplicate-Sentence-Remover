@@ -1,7 +1,6 @@
 fastapi
 uvicorn
 nltk
-scikit-learn
-numpy
 PyPDF2
 python-pptx
+python-docx
