@@ -7,15 +7,12 @@ from nltk.tokenize import sent_tokenize
 from PyPDF2 import PdfReader
 from pptx import Presentation
 from docx import Document
-# Pre-download required NLTK resources at startup
-def setup_nltk():
-    resources = ['punkt', 'punkt_tab']
-    for resource in resources:
-        try:
-            nltk.data.find(f'tokenizers/{resource}')
-        except LookupError:
-            nltk.download(resource)
-setup_nltk()
+import nltk
+
+try:
+    nltk.data.find('tokenizers/punkt')
+except:
+    nltk.download('punkt')
 app = FastAPI()
 # CORS configuration
 app.add_middleware(
