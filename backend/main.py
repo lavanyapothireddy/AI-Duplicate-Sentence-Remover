@@ -1,8 +1,8 @@
-from fastapi import FastAPI, Form, File, UploadFile, HTTPException
+from fastapi import FastAPI, Form, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 import nltk
 import io
-# Import NLP and File Parsers
+
 from nltk.tokenize import sent_tokenize
 from PyPDF2 import PdfReader
 from pptx import Presentation
