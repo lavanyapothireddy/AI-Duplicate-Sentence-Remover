@@ -4,3 +4,4 @@ nltk
 PyPDF2
 python-pptx
 python-docx
+python-multipart
