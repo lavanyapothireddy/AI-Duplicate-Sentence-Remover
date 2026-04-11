@@ -1,21 +1,28 @@
-from fastapi import FastAPI, Form, File, UploadFile
+from fastapi import FastAPI, Form, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import nltk
-try:
-    nltk.data.find('tokenizers/punkt')
-    nltk.data.find('tokenizers/punkt_tab')
-except LookupError:
-    nltk.download('punkt')
-    nltk.download('punkt_tab')
 import io
 
+# Import NLP and File Parsers
+from nltk.tokenize import sent_tokenize
 from PyPDF2 import PdfReader
 from pptx import Presentation
 from docx import Document
 
+# Pre-download required NLTK resources at startup
+def setup_nltk():
+    resources = ['punkt', 'punkt_tab']
+    for resource in resources:
+        try:
+            nltk.data.find(f'tokenizers/{resource}')
+        except LookupError:
+            nltk.download(resource)
+
+setup_nltk()
+
 app = FastAPI()
 
-#  CORS (VERY IMPORTANT)
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,13 +31,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-
-
 @app.get("/")
 def home():
     return {"message": "API is running"}
-
 
 @app.post("/process")
 async def process_text(
@@ -40,60 +43,60 @@ async def process_text(
     try:
         extracted_text = ""
 
-        # ---------- FILE HANDLING ----------
+        # ---------- 1. FILE HANDLING ----------
         if file:
             filename = file.filename.lower()
             content = await file.read()
 
-            # Only allow specific formats
             if not filename.endswith((".pdf", ".ppt", ".pptx", ".docx")):
-                return {"result": "Only PDF, PPT, DOCX files allowed"}
+                return {"result": "Unsupported file format. Use PDF, PPT, or DOCX."}
 
-            # -------- PDF --------
+            # Extracting from PDF
             if filename.endswith(".pdf"):
-                try:
-                    reader = PdfReader(io.BytesIO(content))
-                    for page in reader.pages:
-                        extracted_text += page.extract_text() or ""
-                except Exception:
-                    return {"result": "Error reading PDF file"}
+                reader = PdfReader(io.BytesIO(content))
+                for page in reader.pages:
+                    extracted_text += (page.extract_text() or "") + " "
 
-            # -------- PPT --------
+            # Extracting from PPT
             elif filename.endswith((".ppt", ".pptx")):
-                try:
-                    prs = Presentation(io.BytesIO(content))
-                    for slide in prs.slides:
-                        for shape in slide.shapes:
-                            if hasattr(shape, "text"):
-                                extracted_text += shape.text + " "
-                except Exception:
-                    return {"result": "Error reading PPT file"}
+                prs = Presentation(io.BytesIO(content))
+                for slide in prs.slides:
+                    for shape in slide.shapes:
+                        if hasattr(shape, "text"):
+                            extracted_text += shape.text + " "
 
-            # -------- DOCX --------
+            # Extracting from DOCX
             elif filename.endswith(".docx"):
-                try:
-                    doc = Document(io.BytesIO(content))
-                    for para in doc.paragraphs:
-                        extracted_text += para.text + " "
-                except Exception:
-                    return {"result": "Error reading DOCX file"}
+                doc = Document(io.BytesIO(content))
+                for para in doc.paragraphs:
+                    extracted_text += para.text + " "
 
             text = extracted_text
 
-        # ---------- VALIDATION ----------
+        # ---------- 2. VALIDATION ----------
         if not text or not text.strip():
-            return {"result": "No input provided"}
+            return {"result": "No text content found to process."}
 
-        # ---------- NLP PROCESS ----------
-        from nltk.tokenize import sent_tokenize
+        # ---------- 3. NLP DEDUPLICATION ----------
+        # Tokenize text into individual sentences
+        raw_sentences = sent_tokenize(text)
+        
+        # Deduplication logic:
+        # 1. Strip leading/trailing whitespace
+        # 2. Filter out empty strings
+        # 3. Use dict.fromkeys to remove duplicates while keeping original order
+        seen = set()
+        unique_sentences = []
+        for s in raw_sentences:
+            clean_s = s.strip()
+            if clean_s and clean_s not in seen:
+                unique_sentences.append(clean_s)
+                seen.add(clean_s)
 
-        sentences = sent_tokenize(text)
-        unique_sentences = list(dict.fromkeys(sentences))
+        cleaned_result = " ".join(unique_sentences)
 
-        cleaned_text = " ".join(unique_sentences)
-
-        return {"result": cleaned_text}
+        return {"result": cleaned_result}
 
     except Exception as e:
-        #  prevents crash → avoids CORS error
+        # Return error message to frontend instead of crashing
         return {"result": f"Server error: {str(e)}"}
