@@ -1,6 +1,12 @@
 from fastapi import FastAPI, Form, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 import nltk
+try:
+    nltk.data.find('tokenizers/punkt')
+    nltk.data.find('tokenizers/punkt_tab')
+except LookupError:
+    nltk.download('punkt')
+    nltk.download('punkt_tab')
 import io
 
 from PyPDF2 import PdfReader
@@ -18,11 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# NLTK FIX (prevents crash on Render)
-try:
-    nltk.data.find('tokenizers/punkt')
-except:
-    nltk.download('punkt')
+
 
 
 @app.get("/")
