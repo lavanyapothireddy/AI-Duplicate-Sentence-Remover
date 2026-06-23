@@ -1,23 +1,32 @@
-// 1. SET YOUR API URL
-// Make sure this matches your Render URL exactly. 
-// Do NOT put a "/" at the end.
 const API_URL = "https://ai-duplicate-sentence-remover-1.onrender.com";
 
-/**
- * FEATURE 1: FILE PREVIEW
- * When a user selects a PDF, Word, or PPTX file, this code 
- * sends it to the backend and puts the text into the INPUT box.
- */
-document.getElementById('fileInput').addEventListener('change', async function() {
+/* ── Utility: count sentences in a string ── */
+function countSentences(text) {
+    if (!text || !text.trim()) return 0;
+    const parts = text.trim().split(/(?<=[.!?])\s+/);
+    return parts.filter(s => s.trim().length > 0).length;
+}
+
+/* ── Live input counter ── */
+const inputTextarea = document.getElementById("inputText");
+const inputMeta     = document.getElementById("inputMeta");
+
+inputTextarea.addEventListener("input", () => {
+    const n = countSentences(inputTextarea.value);
+    inputMeta.textContent = n === 1 ? "1 sentence" : `${n} sentences`;
+});
+
+/* ── FEATURE: FILE UPLOAD ── */
+document.getElementById("fileInput").addEventListener("change", async function () {
     const file = this.files[0];
-    const inputText = document.getElementById("inputText");
     const fileNameDisplay = document.getElementById("fileNameDisplay");
 
     if (!file) return;
 
-    // UI Feedback
-    fileNameDisplay.innerText = "⏳ Extracting: " + file.name;
-    inputText.value = "Reading file content... please wait.";
+    fileNameDisplay.className = "loading";
+    fileNameDisplay.textContent = "⏳ Reading " + file.name + "…";
+    inputTextarea.value = "";
+    inputMeta.textContent = "—";
 
     const formData = new FormData();
     formData.append("file", file);
@@ -28,46 +37,58 @@ document.getElementById('fileInput').addEventListener('change', async function()
             body: formData
         });
 
-        // Handle 404 or other server errors
         if (response.status === 404) {
-            alert("Error 404: The endpoint /read-file was not found. Check your main.py routes.");
-            inputText.value = "";
+            inputTextarea.value = "Error 404: /read-file route not found on backend.";
+            fileNameDisplay.className = "";
+            fileNameDisplay.textContent = "❌ Route missing";
             return;
         }
 
         const data = await response.json();
 
         if (data.text) {
-            inputText.value = data.text; // Text appears in the box
-            fileNameDisplay.innerText = "✅ Loaded: " + file.name;
+            inputTextarea.value = data.text;
+            fileNameDisplay.className = "success";
+            fileNameDisplay.textContent = "✅ " + file.name;
+            // Trigger live counter
+            const n = countSentences(data.text);
+            inputMeta.textContent = n === 1 ? "1 sentence" : `${n} sentences`;
         } else {
-            inputText.value = "Error: " + (data.result || "Could not read file.");
+            inputTextarea.value = "Extraction failed: " + (data.result || "Unknown error");
+            fileNameDisplay.className = "";
+            fileNameDisplay.textContent = "❌ Failed";
         }
-    } catch (error) {
-        console.error("Fetch Error:", error);
-        inputText.value = "Connection failed. Check if the backend is 'Live' on Render.";
-        alert("Network Error: Could not connect to the API.");
+    } catch (err) {
+        console.error("Fetch Error:", err);
+        inputTextarea.value = "Connection failed. Make sure the Render service is live.";
+        fileNameDisplay.className = "";
+        fileNameDisplay.textContent = "❌ Connection error";
     }
 });
 
-/**
- * FEATURE 2: REMOVE DUPLICATES
- * Takes the text currently visible in the input box, 
- * cleans it, and puts it in the output box.
- */
+/* ── FEATURE: REMOVE DUPLICATES ── */
 async function removeDuplicates() {
-    const inputText = document.getElementById("inputText").value;
+    const inputVal  = inputTextarea.value.trim();
     const outputBox = document.getElementById("outputText");
+    const outputMeta = document.getElementById("outputMeta");
+    const removedCount = document.getElementById("removedCount");
+    const btn = document.getElementById("processBtn");
 
-    if (!inputText || inputText.startsWith("Reading file")) {
-        alert("Please enter text or wait for the file to finish loading.");
+    if (!inputVal || inputVal.startsWith("Reading file")) {
+        outputBox.value = "Please enter text or upload a file first.";
         return;
     }
 
-    outputBox.value = "⏳ Processing duplicates...";
+    // Loading state
+    btn.classList.add("loading");
+    btn.innerHTML = '<span class="btn-icon">⏳</span> Processing…';
+    outputBox.value = "";
+    outputMeta.textContent = "Working…";
+    removedCount.textContent = "…";
+    removedCount.className = "stat-value";
 
     const formData = new FormData();
-    formData.append("text", inputText);
+    formData.append("text", inputVal);
 
     try {
         const response = await fetch(`${API_URL}/process`, {
@@ -76,8 +97,8 @@ async function removeDuplicates() {
         });
 
         if (response.status === 404) {
-            alert("Error 404: The endpoint /process was not found.");
-            outputBox.value = "";
+            outputBox.value = "Error 404: /process route not found on backend.";
+            resetBtn();
             return;
         }
 
@@ -85,12 +106,44 @@ async function removeDuplicates() {
 
         if (data.result) {
             outputBox.value = data.result;
-        } else {
-            outputBox.value = "Processing complete, but no result returned.";
-        }
 
-    } catch (error) {
-        console.error("Processing Error:", error);
-        outputBox.value = "Error: Could not connect to API.";
+            const inCount  = countSentences(inputVal);
+            const outCount = countSentences(data.result);
+            const diff     = Math.max(0, inCount - outCount);
+
+            // Update stat chip
+            removedCount.textContent = diff;
+            removedCount.className   = diff > 0 ? "stat-value positive" : "stat-value";
+
+            // Update output panel meta
+            outputMeta.textContent = `${outCount} sentences · ${diff} duplicate${diff !== 1 ? "s" : ""} removed`;
+        } else {
+            outputBox.value = "No result returned from the server.";
+            outputMeta.textContent = "—";
+        }
+    } catch (err) {
+        console.error("Processing Error:", err);
+        outputBox.value = "Connection Error: The backend might be sleeping. Try again in a moment.";
+        outputMeta.textContent = "—";
+    } finally {
+        resetBtn();
     }
+}
+
+function resetBtn() {
+    const btn = document.getElementById("processBtn");
+    btn.classList.remove("loading");
+    btn.innerHTML = '<span class="btn-icon">⚡</span> Remove Duplicates';
+}
+
+/* ── FEATURE: COPY OUTPUT ── */
+function copyOutput() {
+    const text = document.getElementById("outputText").value;
+    if (!text || text === "Clean output will appear here…") return;
+
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector(".copy-btn");
+        btn.textContent = "✅ Copied!";
+        setTimeout(() => { btn.innerHTML = "📋 Copy"; }, 2000);
+    });
 }
